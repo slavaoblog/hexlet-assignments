@@ -16,16 +16,16 @@ class App {
                 );
         System.out.println(getCountOfFreeEmails(emails));
     }
-    public static int getCountOfFreeEmails(List<String> list) {
+    public static long getCountOfFreeEmails(List<String> list) {
         List<String> listOfFreeDomains = List.of(
                 "gmail.com",
                 "yandex.ru",
                 "hotmail.com"
         );
-        List<String> filteredList = list.stream()
+        long count = list.stream()
                 .filter(domain -> listOfFreeDomains.contains(domain.split("@")[1]))
-                .collect(Collectors.toList());
-        return filteredList.size();
+                .count();
+        return count;
     }
 }
 // END
