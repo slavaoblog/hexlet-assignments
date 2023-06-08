@@ -7,12 +7,10 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
 import java.nio.file.Paths;
-import java.nio.file.Path;
 import java.nio.file.Files;
 
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -66,38 +64,31 @@ public class UsersServlet extends HttpServlet {
                         <link rel=\"stylesheet\" href=\"mysite.css\">
                     </head>
                     <body>
+                    <div class="container">
+                                            <a href="/">Главная</a>
                     <table>
                 """);
 
-        for (Map<String, String> hashMap : listUsers) {
+        for (Map<String, String> user : listUsers) {
+            String id = user.get("id");
+            String fullName = user.get("firstName") + " " + user.get("lastName");
             body
-                    .append("<tr><td>" + hashMap.get("id") + "</td>")
-                    .append("<td><a href=\"/users/" + hashMap.get("id") + "\">")
-                    .append(hashMap.get("firstName") + " " + hashMap.get("lastName") + "</a></td></tr>");
+                    .append("<tr>")
+                    .append("<td>" + id + "</td>")
+                    .append("<td><a href=\"/users/" + id + "\">" + fullName + "</a></td>")
+                    .append("</tr>");
         }
         body.append("""
                       </table>
+                      </div>
                     </body>
                 </html>
                 """);
         // Устанавливаем тип содержимого ответа и кодировку
         response.setContentType("text/html;charset=UTF-8");
-        // При помощи метода setStatus() можно установить код ответа
-        // response.setStatus(HttpServletResponseSC_OK)
 
         PrintWriter out = response.getWriter();
-        out.println(body.toString());
-
-        // Гипотетический пример, показывающий структуру
-//        users = [
-//        {
-//            "id": "4",
-//                "firstName": "John",
-//                "lastName": "Doe",
-//                "email": "johndoe@gmail.com",
-//        },
-        // другие пользователи
-//  ]
+        out.println(body);
         // END
     }
 
@@ -107,6 +98,7 @@ public class UsersServlet extends HttpServlet {
             throws IOException {
 
         // BEGIN
+        response.setContentType("text/html;charset=UTF-8");
         PrintWriter out = response.getWriter();
         if (id.isEmpty()) {
             out.println("Not found");
@@ -127,28 +119,27 @@ public class UsersServlet extends HttpServlet {
                         <link rel=\"stylesheet\" href=\"mysite.css\">
                     </head>
                     <body>
+                    <div class="container">
+                                            <a href="/users">Список пользователей</a>
                     <table>
                 """);
 
-        for (Map<String, String> hashMap : listUsers) {
-            if (hashMap.get("id").equals(id)) {
+        for (Map<String, String> user : listUsers) {
+            if (user.get("id").equals(id)) {
                 body
-                        .append("<tr><td>\"id\": \"" + hashMap.get("id") + "\"," + "</td></tr>")
-                        .append("<tr><td>\"firstName\": \"" + hashMap.get("firstName") + "\"," + "</td></tr>")
-                        .append("<tr><td>\"lastName\": \"" + hashMap.get("lastName") + "\"," + "</td></tr>")
-                        .append("<tr><td>\"email\": \"" + hashMap.get("email") + "\"," + "</td></tr>");
+                        .append("<tr><td>\"id\": \"" + user.get("id") + "\",</td></tr>")
+                        .append("<tr><td>\"firstName\": \"" + user.get("firstName") + "\",</td></tr>")
+                        .append("<tr><td>\"lastName\": \"" + user.get("lastName") + "\",</td></tr>")
+                        .append("<tr><td>\"email\": \"" + user.get("email") + "\",</td></tr>");
             }
         }
             body.append("""
                           </table>
+                          </div>
                         </body>
                     </html>
                     """);
-            // Устанавливаем тип содержимого ответа и кодировку
-            response.setContentType("text/html;charset=UTF-8");
-            // При помощи метода setStatus() можно установить код ответа
-            // response.setStatus(HttpServletResponseSC_OK)
-            out.println(body.toString());
+            out.println(body);
             // END
         }
 }
