@@ -133,12 +133,12 @@ public class UsersServlet extends HttpServlet {
         for (Map<String, String> hashMap : listUsers) {
             if (hashMap.get("id").equals(id)) {
                 body
-                        .append("<tr><td>\"id\":" + hashMap.get("id") + "</tr></td>")
-                        .append("<tr><td>\"firstName\":" + hashMap.get("firstName") + "</tr></td>")
-                        .append("<tr><td>\"lastName\":" + hashMap.get("lastName") + "</tr></td>")
-                        .append("<tr><td>\"email\":" + hashMap.get("email") + "</tr></td>")
-                        .append(hashMap.get("firstName") + " " + hashMap.get("lastName") + "</a></td></tr>");
+                        .append("<tr><td>\"id\": \"" + hashMap.get("id") + "\"," + "</td></tr>")
+                        .append("<tr><td>\"firstName\": \"" + hashMap.get("firstName") + "\"," + "</td></tr>")
+                        .append("<tr><td>\"lastName\": \"" + hashMap.get("lastName") + "\"," + "</td></tr>")
+                        .append("<tr><td>\"email\": \"" + hashMap.get("email") + "\"," + "</td></tr>");
             }
+        }
             body.append("""
                           </table>
                         </body>
@@ -151,5 +151,4 @@ public class UsersServlet extends HttpServlet {
             out.println(body.toString());
             // END
         }
-    }
 }
