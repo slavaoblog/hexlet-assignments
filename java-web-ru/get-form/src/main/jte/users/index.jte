@@ -23,7 +23,7 @@
             ${user.getId()}
         </td>
         <td>
-            ${user.getFirstName()}
+            ${user.getFirstName()} ${user.getLastName()}
         </td>
     </tr>
     @endfor
