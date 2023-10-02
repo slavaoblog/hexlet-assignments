@@ -1,69 +1,67 @@
 package exercise;
 
-// Импортируем зависимости, необходимые для работы приложения
 import io.javalin.Javalin;
-import io.javalin.rendering.template.JavalinThymeleaf;
-import static io.javalin.apibuilder.ApiBuilder.path;
-import static io.javalin.apibuilder.ApiBuilder.get;
-import static io.javalin.apibuilder.ApiBuilder.post;
+import io.javalin.validation.ValidationException;
+import java.util.List;
+import exercise.model.Article;
+import exercise.dto.articles.ArticlesPage;
+import exercise.dto.articles.NewArticlePage;
+import java.util.Collections;
 
-import org.thymeleaf.TemplateEngine;
-import nz.net.ultraq.thymeleaf.layoutdialect.LayoutDialect;
-import org.thymeleaf.templateresolver.ClassLoaderTemplateResolver;
-import org.thymeleaf.extras.java8time.dialect.Java8TimeDialect;
-
-import exercise.controllers.RootController;
-import exercise.controllers.UserController;
+import exercise.repository.ArticleRepository;
 
 public final class App {
 
-    private static int getPort() {
-        String port = System.getenv().getOrDefault("PORT", "8000");
-        return Integer.valueOf(port);
-    }
-
-    private static TemplateEngine getTemplateEngine() {
-        TemplateEngine templateEngine = new TemplateEngine();
-        templateEngine.addDialect(new LayoutDialect());
-        templateEngine.addDialect(new Java8TimeDialect());
-        ClassLoaderTemplateResolver templateResolver = new ClassLoaderTemplateResolver();
-        templateResolver.setPrefix("/templates/");
-        templateEngine.addTemplateResolver(templateResolver);
-
-        return templateEngine;
-    }
-
-    private static void addRoutes(Javalin app) {
-        app.get("/", RootController.welcome);
-
-        app.routes(() -> {
-            path("users", () -> {
-                get(UserController.listUsers);
-                post(UserController.createUser);
-                get("new", UserController.newUser);
-                get("{id}", UserController.showUser);
-            });
-        });
-    }
-
     public static Javalin getApp() {
 
-        Javalin app = Javalin.create(config -> {
+        var app = Javalin.create(config -> {
             config.plugins.enableDevLogging();
-            JavalinThymeleaf.init(getTemplateEngine());
         });
 
-        addRoutes(app);
-
-        app.before(ctx -> {
-            ctx.attribute("ctx", ctx);
+        app.get("/", ctx -> {
+            ctx.render("index.jte");
         });
+
+        app.get("/articles", ctx -> {
+            List<Article> articles = ArticleRepository.getEntities();
+            var page = new ArticlesPage(articles);
+            ctx.render("articles/index.jte", Collections.singletonMap("page", page));
+        });
+
+        // BEGIN
+        app.get("/articles/new", ctx -> {
+            NewArticlePage page = new NewArticlePage();
+            ctx.render("articles/build.jte", Collections.singletonMap("page", page));
+        });
+
+        app.post("/articles", ctx -> {
+            String title = ctx.formParam("title");
+            String content = ctx.formParam("content");
+
+            try {
+                title = ctx.formParamAsClass("title", String.class)
+                        .check(it -> it.length() > 1, "Название не должно быть короче двух символов")
+                        .check(it -> !ArticleRepository.existsByTitle(it), "Статья с таким названием уже существует")
+                        .get();
+                content = ctx.formParamAsClass("content", String.class)
+                        .check(it -> it.trim().length() > 9, "Статья должна быть не короче 10 символов")
+                        .get();
+                Article article = new Article(title, content);
+                ArticleRepository.save(article);
+                ctx.redirect("/articles");
+            } catch (ValidationException e) {
+                NewArticlePage page = new NewArticlePage(title, content, e.getErrors());
+                ctx.status(422);
+                ctx.render("articles/build.jte", Collections.singletonMap("page", page));
+            }
+        });
+        // END
 
         return app;
     }
 
     public static void main(String[] args) {
         Javalin app = getApp();
-        app.start(getPort());
+        app.start(7070);
     }
 }

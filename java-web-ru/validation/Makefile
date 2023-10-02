@@ -1,8 +1,5 @@
 test:
-	gradle test
+	./gradlew test
 
 start:
-	gradle run
-
-generate-migrations:
-	gradle generateMigrations
+	./gradlew run

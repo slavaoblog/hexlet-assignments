@@ -1,24 +1,22 @@
 package exercise;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import static org.assertj.core.api.Assertions.assertThat;
 import kong.unirest.HttpResponse;
 import kong.unirest.Unirest;
 import io.javalin.Javalin;
-import io.ebean.DB;
-import io.ebean.Database;
-
-import exercise.domain.User;
-import exercise.domain.query.QUser;
+import exercise.repository.ArticleRepository;
+import exercise.model.Article;
+import java.util.List;
 
 class AppTest {
 
     private static Javalin app;
     private static String baseUrl;
-    private static Database database;
 
     @BeforeAll
     public static void beforeAll() {
@@ -26,7 +24,6 @@ class AppTest {
         app.start(0);
         int port = app.port();
         baseUrl = "http://localhost:" + port;
-        database = DB.getDefault();
     }
 
     @AfterAll
@@ -34,201 +31,113 @@ class AppTest {
         app.stop();
     }
 
-    @AfterEach
-    void afterEach() {
-        database.script().run("/truncate.sql");
-        database.script().run("/seed.sql");
+    @BeforeEach
+    public void clear() {
+        ArticleRepository.clear();
     }
 
     @Test
-    void testRoot() {
-        HttpResponse<String> response = Unirest.get(baseUrl).asString();
+    void testRootPage() throws Exception {
+        HttpResponse<String> response = Unirest.get(baseUrl + "/").asString();
         assertThat(response.getStatus()).isEqualTo(200);
     }
 
     @Test
-    void testUsers() {
-
-        HttpResponse<String> response = Unirest
-            .get(baseUrl + "/users")
-            .asString();
-        String content = response.getBody();
-
-        assertThat(response.getStatus()).isEqualTo(200);
-        assertThat(content).contains("Wendell Legros");
-        assertThat(content).contains("Larry Powlowski");
-    }
-
-    @Test
-    void testUser() {
-
-        HttpResponse<String> response = Unirest
-            .get(baseUrl + "/users/5")
-            .asString();
-        String content = response.getBody();
-
-        assertThat(response.getStatus()).isEqualTo(200);
-        assertThat(content).contains("Rolando Larson");
-        assertThat(content).contains("galen.hickle@yahoo.com");
-    }
-
-    @Test
-    void testNewUser() {
-
-        HttpResponse<String> response = Unirest
-            .get(baseUrl + "/users/new")
-            .asString();
-
+    void testListArticles() throws Exception {
+        HttpResponse<String> response = Unirest.get(baseUrl + "/articles").asString();
         assertThat(response.getStatus()).isEqualTo(200);
     }
 
     @Test
-    void testCreateUser() {
+    void testNewArticlePage() throws Exception {
+        HttpResponse<String> response = Unirest.get(baseUrl + "/articles/new").asString();
+        assertThat(response.getStatus()).isEqualTo(200);
+    }
 
-        String firstName = "Aleksandr";
-        String lastName = "Vasiliev";
-        String email = "aleks@yandex.ru";
-        String password = "123456";
-
-        HttpResponse<String> responsePost = Unirest
-            .post(baseUrl + "/users")
-            .field("firstName", firstName)
-            .field("lastName", lastName)
-            .field("email", email)
-            .field("password", password)
+    @Test
+    void testCreateArticlePositive() throws Exception {
+        HttpResponse responsePost = Unirest
+            .post(baseUrl + "/articles")
+            .field("title", "test title")
+            .field("content", "test content")
             .asEmpty();
 
         assertThat(responsePost.getStatus()).isEqualTo(302);
-        assertThat(responsePost.getHeaders().getFirst("Location")).isEqualTo("/users");
+        assertThat(responsePost.getHeaders().getFirst("Location")).isEqualTo("/articles");
 
-        User actualUser = new QUser()
-            .lastName.equalTo(lastName)
-            .findOne();
+        HttpResponse<String> response = Unirest
+            .get(baseUrl + "/articles")
+            .asString();
+        String body = response.getBody();
+        assertThat(body).contains("test title");
+        assertThat(body).contains("test content");
 
-        assertThat(actualUser).isNotNull();
-        assertThat(actualUser.getFirstName()).isEqualTo(firstName);
-        assertThat(actualUser.getLastName()).isEqualTo(lastName);
-        assertThat(actualUser.getEmail()).isEqualTo(email);
+        // var article = ArticleRepository.findByTitle("test title");
+        // assertThat(article, is(notNullValue()));
     }
 
     @Test
-    void testCreateUserWithIncorrectName1() {
-
-        String firstName = "Aleksandr";
-        String lastName = "";
-        String email = "al@yandex.ru";
-        String password = "12345";
-
+    void testCreateArticleNegative1() throws Exception {
         HttpResponse<String> responsePost = Unirest
-            .post(baseUrl + "/users")
-            .field("firstName", firstName)
-            .field("lastName", lastName)
-            .field("email", email)
-            .field("password", password)
+            .post(baseUrl + "/articles")
+            .field("title", "testTitle")
+            .field("content", "testBody")
             .asString();
 
         assertThat(responsePost.getStatus()).isEqualTo(422);
 
-        String content = responsePost.getBody();
+        String body = responsePost.getBody();
+        assertThat(body).contains("testTitle");
+        assertThat(body).contains("testBody");
+        assertThat(body).contains("Статья должна быть не короче 10 символов");
 
-        assertThat(content).contains("Aleksandr");
-        assertThat(content).contains("al@yandex.ru");
+        // var article = ArticleRepository.findByTitle("test title");
+        // assertNull(article);
     }
 
     @Test
-    void testCreateUserWithIncorrectName2() {
-
-        String firstName = "";
-        String lastName = "Petrov";
-        String email = "petrov@mail.ru";
-        String password = "12345";
-
+    void testCreateArticleNegative2() throws Exception {
         HttpResponse<String> responsePost = Unirest
-            .post(baseUrl + "/users")
-            .field("firstName", firstName)
-            .field("lastName", lastName)
-            .field("email", email)
-            .field("password", password)
+            .post(baseUrl + "/articles")
+            .field("title", "q")
+            .field("content", "test content")
             .asString();
 
         assertThat(responsePost.getStatus()).isEqualTo(422);
 
-        String content = responsePost.getBody();
+        String body = responsePost.getBody();
+        assertThat(body).contains("q");
+        assertThat(body).contains("test content");
+        assertThat(body).contains("Название не должно быть короче двух символов");
 
-        assertThat(content).contains("Petrov");
-        assertThat(content).contains("petrov@mail.ru");
+        // var article = ArticleRepository.findByTitle("q");
+        // assertNull(article);
     }
 
     @Test
-    void testCreateUserWithIncorrectEmail() {
+    void testCreateArticleNegative3() throws Exception {
+        HttpResponse<String> response1 = Unirest
+            .post(baseUrl + "/articles")
+            .field("title", "test article")
+            .field("content", "test content")
+            .asEmpty();
 
-        String firstName = "Ivan";
-        String lastName = "Petrov";
-        String email = "ivanpetrov.ru";
-        String password = "12345";
+        assertThat(response1.getStatus()).isEqualTo(302);
 
-        HttpResponse<String> responsePost = Unirest
-            .post(baseUrl + "/users")
-            .field("firstName", firstName)
-            .field("lastName", lastName)
-            .field("email", email)
-            .field("password", password)
+        HttpResponse<String> response2 = Unirest
+            .post(baseUrl + "/articles")
+            .field("title", "test article")
+            .field("content", "test content 2")
             .asString();
 
-        assertThat(responsePost.getStatus()).isEqualTo(422);
+        assertThat(response2.getStatus()).isEqualTo(422);
 
-        String content = responsePost.getBody();
+        String body = response2.getBody();
+        assertThat(body).contains("test article");
+        assertThat(body).contains("test content 2");
+        assertThat(body).contains("Статья с таким названием уже существует");
 
-        assertThat(content).contains("Ivan");
-        assertThat(content).contains("Petrov");
-        assertThat(content).contains("ivanpetrov.ru");
-    }
-
-    @Test
-    void testCreateUserWithIncorrectPassword1() {
-
-        String firstName = "Valery";
-        String lastName = "Zdanov";
-        String email = "val@gmail.com";
-        String password = "12";
-
-        HttpResponse<String> responsePost = Unirest
-            .post(baseUrl + "/users")
-            .field("firstName", firstName)
-            .field("lastName", lastName)
-            .field("email", email)
-            .field("password", password)
-            .asString();
-
-        assertThat(responsePost.getStatus()).isEqualTo(422);
-
-        String content = responsePost.getBody();
-
-        assertThat(content).contains("Valery");
-        assertThat(content).contains("Zdanov");
-    }
-
-    @Test
-    void testCreateUserWithIncorrectPassword2() {
-
-        String firstName = "Valery";
-        String lastName = "Zdanov";
-        String email = "val@gmail.com";
-        String password = "asd";
-
-        HttpResponse<String> responsePost = Unirest
-            .post(baseUrl + "/users")
-            .field("firstName", firstName)
-            .field("lastName", lastName)
-            .field("email", email)
-            .field("password", password)
-            .asString();
-
-        assertThat(responsePost.getStatus()).isEqualTo(422);
-
-        String content = responsePost.getBody();
-
-        assertThat(content).contains("Valery");
-        assertThat(content).contains("Zdanov");
+        List<Article> articles = ArticleRepository.search("test article");
+        assertThat(articles.size()).isEqualTo(1);
     }
 }

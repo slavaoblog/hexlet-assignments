@@ -1,40 +1,38 @@
-// // Обработчик с валидацией
+import io.javalin.Javalin;
 
-// public static Handler createCompany = ctx -> {
-//     String name = ctx.formParam("name");
-//     String workers = ctx.formParam("workers");
+public final class App {
 
-//     // Добавляем валидатор для каждого поля
-//     Validator<String> nameValidator = ctx.formParamAsClass("firstName", String.class)
-//         // Добавляем проверку, что имя не долно быть пустым
-//         .check(it -> !it.isEmpty(), "Имя не должно быть пустым");
+    public static Javalin getApp() {
 
-//     // Можно добавить несколько проверок
-//     Validator<String> workersValidator = ctx.formParamAsClass("lastName", String.class)
-//         .check(it ->  StringUtils.isNumeric(it), "Количество работников должно содержать только цифры")
-//         .check(it -> !it.isEmpty(), "Количество работников не должно быть пустым");
+        var app = Javalin.create(config -> {
+            config.plugins.enableDevLogging();
+        });
 
-//     // Валидируем данные из форм и собираем все ошибки валидации в словарь
-//     // Если ошибок нет, словарь будет пустой
-//     Map<String, List<ValidationError<? extends Object>>> errors = JavalinValidation.collectErrors(
-//         nameValidator,
-//         workersValidator,
-//     );
+        List<String> users = List.of("John", "Mark", "Ann");
 
-//     // Если данные не валидные
-//     if (!errors.isEmpty()) {
-//         // Устанавливаем код ответа
-//         ctx.status(422);
-//         // Передаем ошибки и данные компании
-//         ctx.attribute("errors", errors);
-//         Company invalidCompany = new Company(name, workers);
-//         ctx.attribute("company", invalidCompany);
-//         ctx.render("companies/new.html");
-//         return;
-//     }
+        app.get("/users", ctx -> {
+            var userNumber = ctx.pathParamAsClass("id", Integer.class);
+            var cond = ctx.queryParam("cond");
+            List<String> filteredUsers;
 
-//     Company company = new User(name, workers);
-//     company.save();
+            if (term == null) {
+                filteredUsers = users;
+            } else {
+                filteredUsers = users
+                    .stream()
+                    .filter(u -> u.contains(cond))
+                    .toList();
+            }
 
-//     ctx.redirect("/companies");
-// };
+            var page = new UsersPage(users, cond);
+            ctx.render("users/index.jte", Collections.singletonMap("page", page));
+        });
+
+        return app;
+    }
+
+    public static void main(String[] args) {
+        Javalin app = getApp();
+        app.start(7070);
+    }
+}
