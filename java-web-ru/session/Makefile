@@ -1,5 +1,5 @@
 test:
-	gradle test
+	./gradlew test
 
 start:
-	gradle run
+	./gradlew run
